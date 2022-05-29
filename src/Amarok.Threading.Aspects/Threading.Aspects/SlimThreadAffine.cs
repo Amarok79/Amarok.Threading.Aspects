@@ -28,24 +28,31 @@ public class SlimThreadAffine : TypeAspect
 
         foreach (var property in builder.Target.Properties)
         {
-            if (property.IsStatic)
+            if (property.IsStatic || property.IsAbstract)
             {
                 continue;
             }
 
-            if (property.Writeability != Writeability.All)
+            if (property.Writeability == Writeability.ConstructorOnly)
             {
                 continue;
             }
 
+            if (property.Writeability == Writeability.InitOnly || property.Writeability == Writeability.None)
+            {
+                builder.Advice.OverrideAccessors(property, nameof(PropertyGetTemplate));
+            }
 
-            builder.Advice.OverrideAccessors(property, nameof(FieldGetTemplate), nameof(FieldSetTemplate));
+            if (property.Writeability == Writeability.All)
+            {
+                builder.Advice.OverrideAccessors(property, nameof(PropertyGetTemplate), nameof(PropertySetTemplate));
+            }
         }
     }
 
 
     [Template]
-    public dynamic? FieldGetTemplate()
+    public dynamic? PropertyGetTemplate()
     {
         __SlimThreadAffine_VerifyAccess(meta.Target.Member.ToDisplayString());
 
@@ -53,7 +60,7 @@ public class SlimThreadAffine : TypeAspect
     }
 
     [Template]
-    public void FieldSetTemplate(dynamic value)
+    public void PropertySetTemplate(dynamic value)
     {
         __SlimThreadAffine_VerifyAccess(meta.Target.Member.ToDisplayString());
 
