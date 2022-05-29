@@ -4,6 +4,7 @@
         <TargetFramework>net6.0</TargetFramework>
         <RootNamespace>Amarok</RootNamespace>
         <Nullable>enable</Nullable>
+        <OutputType>Exe</OutputType>
     </PropertyGroup>
 
     <ItemGroup>

@@ -80,6 +80,7 @@ public class SlimThreadAffineSample
     public async Task MemberAsyncMethod()
     {
         await Task.Yield();
+
         await Task.Yield();
     }
 

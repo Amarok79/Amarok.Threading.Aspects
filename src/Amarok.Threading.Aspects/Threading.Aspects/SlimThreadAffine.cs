@@ -4,6 +4,8 @@
 #pragma warning disable 0169
 
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Metalama.Framework.Aspects;
 using Metalama.Framework.Code;
 using Metalama.Framework.Eligibility;
@@ -26,6 +28,36 @@ public class SlimThreadAffine : TypeAspect
     {
         base.BuildAspect(builder);
 
+        _BuildAspect_Properties(builder);
+        _BuildAspect_Methods(builder);
+    }
+
+    [CompileTime]
+    private void _BuildAspect_Methods(IAspectBuilder<INamedType> builder)
+    {
+        foreach (var method in builder.Target.Methods)
+        {
+            if (method.IsStatic || method.IsAbstract || method.IsOpenGeneric)
+            {
+                continue;
+            }
+
+            builder.Advice.Override(
+                method,
+                new MethodTemplateSelector(
+                    nameof(MethodTemplate),
+                    nameof(AsyncMethodTemplate),
+                    null,
+                    null,
+                    nameof(AsyncEnumerableMethodTemplate)
+                )
+            );
+        }
+    }
+
+    [CompileTime]
+    private void _BuildAspect_Properties(IAspectBuilder<INamedType> builder)
+    {
         foreach (var property in builder.Target.Properties)
         {
             if (property.IsStatic || property.IsAbstract)
@@ -49,6 +81,37 @@ public class SlimThreadAffine : TypeAspect
             }
         }
     }
+
+
+    [Template]
+    public dynamic? MethodTemplate()
+    {
+        __SlimThreadAffine_VerifyAccess(meta.Target.Member.ToDisplayString());
+
+        return meta.Proceed();
+    }
+
+    [Template]
+    public Task<dynamic?> AsyncMethodTemplate()
+    {
+        __SlimThreadAffine_VerifyAccess(meta.Target.Member.ToDisplayString());
+
+        return meta.ProceedAsync();
+    }
+
+    [Template]
+    public async IAsyncEnumerable<dynamic?> AsyncEnumerableMethodTemplate()
+    {
+        __SlimThreadAffine_VerifyAccess(meta.Target.Member.ToDisplayString());
+
+        await foreach (var item in meta.ProceedAsyncEnumerable())
+        {
+            __SlimThreadAffine_VerifyAccess(meta.Target.Member.ToDisplayString());
+
+            yield return item;
+        }
+    }
+
 
 
     [Template]
@@ -76,6 +139,8 @@ public class SlimThreadAffine : TypeAspect
     [Introduce(WhenExists = OverrideStrategy.Ignore)]
     private protected void __SlimThreadAffine_VerifyAccess(String memberName)
     {
+        Console.WriteLine("xxx");
+
         if (Environment.CurrentManagedThreadId == __SlimThreadAffine_ManagedThreadId)
         {
             return;
